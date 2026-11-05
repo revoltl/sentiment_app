@@ -1,0 +1,15 @@
+{
+  "lda_model": {
+    "top_n_words": 10,
+    "max_iter": 50,
+    "learning_method": "online",
+    "random_state": 42,
+    "max_df": 0.95,
+    "min_df": 1
+  },
+  "stopwords_dir": "data/stopwords",
+  "prompts": {
+    "llm_analyze_aspect": "以下是从评论数据中提取的主题关键词：\n{comment_topic}\n\n请根据这些主题，归纳出至少{n_topics}个用于方面级情感分析的方面，每个方面格式为'大类#子类'（如：食物#味道）。直接输出逗号分隔的列表，不要有其他文字。",
+    "llm_analyze_topic": "以下是从评论数据中提取的主题关键词：\n{comment_topic}\n\n请根据这些主题，归纳出至少{n_topics}个核心讨论主题，用于后续的分类。直接输出逗号分隔的列表，不要有其他文字。"
+  }
+}

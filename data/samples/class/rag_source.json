@@ -1,0 +1,8 @@
+{
+  "mission": "class",
+  "data_format": {
+    "id_col": "original_index",
+    "text_col": "comment",
+    "label_col": "label"
+  }
+}

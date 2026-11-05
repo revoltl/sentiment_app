@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}基于大语言模型的消费者评论情感分析系统{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+        }
+        .nav-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        /* 自定义下拉框样式 */
+        select {
+            background-color: rgba(30, 20, 80, 0.6) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1rem;
+            padding-right: 2rem;
+            transition: all 0.3s;
+        }
+        select:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            background-color: rgba(30, 20, 80, 0.8) !important;
+        }
+        option {
+            background-color: #2D1B69; /* 深紫色背景 */
+            color: white;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="p-6">
+    <!-- 顶部导航 -->
+    <header class="mb-8 flex justify-between items-center">
+        <h1 class="text-2xl font-bold tracking-wider">消费者情感分析模块</h1>
+        <nav class="flex gap-4">
+            <a href="/" class="nav-btn {% if request.path == '/' %}active{% endif %}">数据可视化</a>
+            <a href="/command_launcher" class="nav-btn {% if request.path == '/command_launcher' %}active{% endif %}">情感分析任务</a>
+            <a href="/config_editor" class="nav-btn {% if request.path == '/config_editor' %}active{% endif %}">参数配置</a>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 全局放大模态框 -->
+    <div id="maximize-modal" class="fixed inset-0 z-50 hidden bg-black/90 flex items-center justify-center p-8">
+        <button onclick="closeModal()" class="absolute top-6 right-6 text-4xl hover:text-red-500">&times;</button>
+        <div id="modal-content" class="w-full h-full flex items-center justify-center">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+    <script>
+        function openModal(contentHtml) {
+            const modal = document.getElementById('maximize-modal');
+            const container = document.getElementById('modal-content');
+            container.innerHTML = contentHtml;
+            modal.classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('maximize-modal').classList.add('hidden');
+            document.getElementById('modal-content').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

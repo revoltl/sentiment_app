@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 顶部最小化框架容器 (Top Bar) -->
+<div id="minimized-bar" class="flex gap-4 mb-4 empty:hidden">
+    <!-- 最小化的按钮将显示在这里 -->
+</div>
+
+<div id="dashboard-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)] transition-all duration-500 items-stretch">
+    
+    <!-- 1. 数据理解框 -->
+    <div id="frame-du" class="glass-card flex flex-col overflow-hidden transition-all duration-500">
+        <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="font-bold whitespace-nowrap">数据理解</span>
+                <select id="select-du" class="rounded px-2 py-1 text-xs outline-none" onchange="loadDU(this.value)">
+                    <option value="">选择数据集...</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleFrame('du', 'minimize')" title="最小化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <button id="max-btn-du" onclick="toggleFrame('du', 'maximize')" title="最大化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div id="body-du" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-4 auto-rows-min scroll-smooth">
+            <!-- 智能网格内容 -->
+        </div>
+    </div>
+
+    <!-- 2. 结果分析框 -->
+    <div id="frame-ra" class="glass-card flex flex-col overflow-hidden transition-all duration-500">
+        <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="font-bold whitespace-nowrap">结果分析</span>
+                <select id="select-ra" class="rounded px-2 py-1 text-xs outline-none" onchange="loadRA(this.value)">
+                    <option value="">选择任务...</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleFrame('ra', 'minimize')" title="最小化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <button id="max-btn-ra" onclick="toggleFrame('ra', 'maximize')" title="最大化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div id="body-ra" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-4 auto-rows-min scroll-smooth">
+            <!-- 智能网格内容 -->
+        </div>
+    </div>
+
+    <!-- 3. 模型评估框 -->
+    <div id="frame-me" class="glass-card flex flex-col overflow-hidden transition-all duration-500">
+        <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="font-bold whitespace-nowrap">模型评估</span>
+                <select id="select-me" class="rounded px-2 py-1 text-xs outline-none" onchange="loadME(this.value)">
+                    <option value="">选择评估结果...</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleFrame('me', 'minimize')" title="最小化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <button id="max-btn-me" onclick="toggleFrame('me', 'maximize')" title="最大化" class="hover:text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div id="body-me" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-4 auto-rows-min scroll-smooth">
+            <!-- 智能网格内容 -->
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let galleryData = {};
+    const frameLabels = { du: '数据理解', ra: '结果分析', me: '模型评估' };
+    const frames = ['du', 'ra', 'me'];
+    let frameStates = {
+        du: 'normal', // normal, minimized, maximized
+        ra: 'normal',
+        me: 'normal'
+    };
+
+    function toggleFrame(id, action) {
+        const grid = document.getElementById('dashboard-grid');
+        const frame = document.getElementById(`frame-${id}`);
+        const minBar = document.getElementById('minimized-bar');
+        
+        if (action === 'minimize') {
+            if (frameStates[id] === 'minimized') {
+                // 恢复 (从顶部 Bar 回到网格)
+                frameStates[id] = 'normal';
+                frame.classList.remove('hidden');
+                const btn = document.getElementById(`min-btn-${id}`);
+                if (btn) btn.remove();
+            } else {
+                // 最小化 (移动到顶部 Bar)
+                frameStates[id] = 'minimized';
+                frame.classList.add('hidden');
+                
+                if (!document.getElementById(`min-btn-${id}`)) {
+                    const btn = document.createElement('button');
+                    btn.id = `min-btn-${id}`;
+                    btn.className = 'glass-card px-4 py-2 flex items-center gap-2 hover:bg-white/20 transition-all text-sm';
+                    btn.innerHTML = `<span>${frameLabels[id]}</span> <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+                    btn.onclick = () => toggleFrame(id, 'minimize');
+                    minBar.appendChild(btn);
+                }
+            }
+        } else if (action === 'maximize') {
+            if (frameStates[id] === 'maximized') {
+                // 退出最大化
+                frames.forEach(f => {
+                    if (frameStates[f] !== 'minimized') {
+                        document.getElementById(`frame-${f}`).classList.remove('hidden');
+                    }
+                    if (frameStates[f] === 'maximized') frameStates[f] = 'normal';
+                });
+            } else {
+                // 最大化
+                frames.forEach(f => {
+                    const el = document.getElementById(`frame-${f}`);
+                    if (f !== id) {
+                        el.classList.add('hidden');
+                    } else {
+                        el.classList.remove('hidden');
+                    }
+                });
+                frameStates[id] = 'maximized';
+            }
+        }
+        
+        updateGridLayout();
+    }
+
+    function updateGridLayout() {
+        const grid = document.getElementById('dashboard-grid');
+        const hasMaximized = Object.values(frameStates).some(s => s === 'maximized');
+        
+        if (hasMaximized) {
+            grid.className = `grid grid-cols-1 gap-6 h-[calc(100vh-220px)] transition-all duration-500`;
+        } else {
+            const normalFrames = frames.filter(f => frameStates[f] === 'normal');
+            const count = normalFrames.length;
+            
+            grid.className = `grid grid-cols-1 gap-6 h-[calc(100vh-220px)] transition-all duration-500`;
+            if (count === 3) grid.classList.add('lg:grid-cols-3');
+            else if (count === 2) grid.classList.add('lg:grid-cols-2');
+            else if (count === 1) grid.classList.add('lg:grid-cols-1');
+        }
+    }
+
+    async function initGallery() {
+        const res = await fetch('/api/gallery');
+        galleryData = await res.json();
+        
+        const duSelect = document.getElementById('select-du');
+        const raSelect = document.getElementById('select-ra');
+        const meSelect = document.getElementById('select-me');
+
+        Object.keys(galleryData).forEach(path => {
+            const opt = `<option value="${path}">${path}</option>`;
+            if (path.startsWith('数据理解')) duSelect.innerHTML += opt;
+            else if (path.startsWith('结果分析')) raSelect.innerHTML += opt;
+            else if (path.startsWith('模型评估')) meSelect.innerHTML += opt;
+        });
+    }
+
+    function createMediaCard(path, file) {
+        const fullPath = `/output/${path}/${file}`;
+        
+        // 1. 处理 HTML (如 pyLDAvis)
+        if (file.endsWith('.html')) {
+            return `
+                <div class="col-span-2 aspect-[16/9] glass-card overflow-hidden group relative">
+                    <iframe src="${fullPath}" class="w-full h-full border-none bg-white"></iframe>
+                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                        <button onclick="openModal('<iframe src=\\'${fullPath}\\' class=\\'w-full h-full border-none bg-white\\'></iframe>')" class="bg-black/60 p-1 rounded hover:bg-black/80">全屏</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 2. 处理 JSON (主题词等文本结果)
+        if (file.endsWith('.json') && !file.includes('metrics')) {
+            return `
+                <div class="col-span-2 p-4 glass-card bg-black/30 min-h-[100px] flex flex-col">
+                    <div class="text-[10px] opacity-40 font-bold mb-2 uppercase flex justify-between">
+                        <span>${file}</span>
+                        <button onclick="fetchAndShowJson('${path}', '${file}')" class="text-indigo-400 hover:underline">刷新</button>
+                    </div>
+                    <pre id="json-${path}-${file}" class="text-xs text-indigo-200 whitespace-pre-wrap font-mono leading-relaxed">加载中...</pre>
+                </div>
+            `;
+        }
+        
+        const isWide = file.includes('heatmap') || file.includes('frequency') || file.includes('dist') || file.includes('keywords');
+        const gridSpan = isWide ? 'col-span-2' : 'col-span-1';
+
+        // 3. 处理图片 (增加时间戳防止缓存)
+        const cacheBuster = `?t=${new Date().getTime()}`;
+        return `
+            <div class="${gridSpan} aspect-[4/3] glass-card overflow-hidden group relative cursor-pointer flex items-center justify-center bg-black/20" 
+                 onclick="zoomImage('${fullPath}${cacheBuster}')">
+                <img src="${fullPath}${cacheBuster}" class="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105">
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
+                <div class="p-2 text-[10px] bg-black/60 absolute bottom-0 w-full truncate opacity-0 group-hover:opacity-100 transition-opacity">${file}</div>
+            </div>
+        `;
+    }
+
+    async function fetchAndShowJson(path, file) {
+        const id = `json-${path}-${file}`;
+        try {
+            const res = await fetch(`/output/${path}/${file}`);
+            const data = await res.json();
+            document.getElementById(id).textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+            document.getElementById(id).textContent = "解析失败: " + e.message;
+        }
+    }
+
+    function zoomImage(src) {
+        // 直接使用全路径，确保无误
+        const content = `<div class="w-full h-full flex items-center justify-center bg-black/80 p-4">
+            <img src="${src}" class="max-w-full max-h-full shadow-2xl rounded-lg object-contain">
+        </div>`;
+        openModal(content);
+    }
+
+    function loadDU(path) {
+        const container = document.getElementById('body-du');
+        if (!path) { container.innerHTML = ''; return; }
+        const files = galleryData[path];
+        container.innerHTML = files.map(f => createMediaCard(path, f)).join('');
+        // 加载后触发 JSON 渲染
+        files.filter(f => f.endsWith('.json') && !f.includes('metrics')).forEach(f => fetchAndShowJson(path, f));
+    }
+
+    function loadRA(path) {
+        const container = document.getElementById('body-ra');
+        if (!path) { container.innerHTML = ''; return; }
+        const files = galleryData[path].filter(f => !f.endsWith('.csv') && !f.endsWith('.json'));
+        container.innerHTML = files.map(f => createMediaCard(path, f)).join('');
+    }
+
+    async function loadME(path) {
+        const container = document.getElementById('body-me');
+        if (!path) { container.innerHTML = ''; return; }
+        const files = galleryData[path];
+        
+        let html = files.filter(f => f.endsWith('.png')).map(f => createMediaCard(path, f)).join('');
+        
+        if (files.includes('metrics.json')) {
+            const mRes = await fetch(`/output/${path}/metrics.json`);
+            const metrics = await mRes.json();
+            html += `
+                <div class="col-span-2 p-6 glass-card mt-2 border-indigo-500/30 bg-indigo-500/5">
+                    <h4 class="text-sm font-bold mb-4 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-indigo-500 rounded"></span>指标摘要 (Performance)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        ${Object.entries(metrics).map(([k,v]) => `
+                            <div class="flex flex-col gap-1 border-l border-white/10 pl-3">
+                                <span class="text-[10px] uppercase opacity-40 font-bold">${k}</span>
+                                <span class="text-indigo-300 font-mono text-lg">${typeof v === 'number' ? v.toFixed(4) : v}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    }
+
+    initGallery();
+</script>
+{% endblock %}

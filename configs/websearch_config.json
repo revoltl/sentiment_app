@@ -1,0 +1,17 @@
+{
+    "PROVIDER": "deepseek",
+    "TAVILY_API_KEY": "",
+    "DEEPSEEK_API_KEY": "",
+    "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+    "SEARCH_DEPTH": "basic",
+    "MAX_RESULTS": 3,
+    "INCLUDE_ANSWER": false,
+    "SEARCH_MODEL": "qwen3:8b",
+    "EXTRACTION_MODEL": "qwen3:8b",
+    "EXPLANATION_MODEL": "qwen3:8b",
+    "prompts": {
+        "extract_unknown_words": "请从以下评论中提取出你确实不认识的梗、缩写、网络俚语等词汇，如果你明确知道其含义就不要输出（例如：“乱七八糟”，“奥特曼”，“太酷了”...这些词很明显你认识），颜文字和标点符号并不属于疑似词的范畴。直接输出一个JSON列表字符串，如：[\"词1\", \"词2\"]。如果没有，请输出：[]。评论内容：{comment}",
+        "explain_unknown_word": "以下是关于词汇 '{term}' 的网络搜索结果：\n{search_context}\n\n请结合这些搜索结果，给出该词的定义和它通常代表的情感倾向。直接输出一个JSON对象，格式如下：{{\"term\": \"{term}\", \"definition\": \"...\", \"sentiment\": \"...\"}}。不要有其他解释。",
+        "explain_sentence_context": "以下是关于这段话的背景搜索结果：\n{search_context}\n\n这段话是：\"{sentence}\"\n\n请结合搜索结果，解释这段话背后的背景、涉及的人物/事件、以及整体的情感倾向。直接输出一个JSON对象，格式如下：{{\"background\": \"...\", \"entities\": [\"...\"], \"sentiment\": \"...\"}}。不要有其他解释。"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "keep_alive": "5m",
+    "think": true,
+    "format": null,
+    "options": {
+        "num_ctx": 8192
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "embedding": {
+    "model_name": "qwen3-embedding:8b",
+    "base_url": "http://localhost:11434"
+  },
+  "vector_store": {
+    "base_dir": "data/vector_stores",
+    "top_k": 5
+  }
+}

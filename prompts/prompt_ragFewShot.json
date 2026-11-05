@@ -1,0 +1,3 @@
+﻿{
+  "prompt_ragFewShot": "以下是输出示例，但是最终输出以上文给定的词汇和标签为准：\n{rag_few_shot}"
+}

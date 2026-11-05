@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card p-6 h-[calc(100vh-160px)] flex flex-col gap-6">
+    <div class="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
+        
+        <!-- 左侧：任务配置表单 -->
+        <div class="w-full lg:w-1/2 flex flex-col gap-4 overflow-y-auto pr-2">
+            <div class="flex gap-2 flex-wrap mb-2">
+                <button onclick="switchTask('data_understanding')" class="task-tab px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm active" id="tab-du">数据理解</button>
+                <button onclick="switchTask('rag_builder')" class="task-tab px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm" id="tab-rag">向量库构建</button>
+                <button onclick="switchTask('pipeline_main')" class="task-tab px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm" id="tab-main">主推理任务</button>
+                <button onclick="switchTask('result_parser')" class="task-tab px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm" id="tab-parser">成果解析</button>
+                <button onclick="switchTask('model_evaluation')" class="task-tab px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm" id="tab-eval">模型评估</button>
+            </div>
+
+            <!-- 动态表单容器 -->
+            <div id="task-form" class="space-y-4 bg-black/20 p-6 rounded-xl border border-white/5">
+                <!-- 动态生成内容 -->
+            </div>
+
+            <div class="flex justify-between items-center mt-4 p-4 glass-card bg-indigo-500/10">
+                <div class="text-xs opacity-60">组装后的命令预览：</div>
+                <button id="launch-btn" onclick="launch()" class="bg-indigo-600 hover:bg-indigo-500 px-10 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-500/20">开始任务 (Start Task)</button>
+            </div>
+            <div id="cmd-preview" class="p-3 bg-black/40 rounded text-[10px] font-mono text-indigo-300 break-all border border-white/5"></div>
+        </div>
+
+        <!-- 右侧：实时日志区 -->
+        <div class="w-full lg:w-1/2 flex flex-col bg-black/40 rounded-xl p-6 font-mono text-xs overflow-hidden border border-white/10 shadow-inner">
+            <div class="flex justify-between items-center mb-4 text-white/40 border-b border-white/5 pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>实时执行日志 (Live Logs)</span>
+                </div>
+                <button onclick="clearLogs()" class="hover:text-white transition">清空控制台</button>
+            </div>
+            <div id="log-container" class="flex-1 space-y-1 text-green-400 overflow-y-auto scroll-smooth custom-scrollbar">
+                <div class="opacity-30">> 等待任务启动...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .task-tab.active { background: rgba(79, 70, 229, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: bold; opacity: 0.6; margin-bottom: 0.25rem; }
+    .form-input { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.5rem; padding: 0.5rem 0.75rem; outline: none; transition: border 0.3s; }
+    .form-input:focus { border-color: rgba(99, 102, 241, 0.5); }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
+</style>
+
+<script>
+    const PYTHON_EXE = "{{ python_exe }}";
+    let currentTask = 'data_understanding';
+    
+    const taskConfigs = {
+        data_understanding: {
+            script: "src/data_understanding.py",
+            description: "执行数据预处理与 LDA 主题分析可视化",
+            fields: [
+                { id: "comment_csv", label: "评论 CSV 路径", value: "data/samples/class/comments.csv", required: true },
+                { id: "comment_col", label: "文本列名", value: "comment", required: true },
+                { id: "lda_config", label: "LDA 配置路径", value: "configs/lda_config.json", required: true },
+                { id: "output_dir", label: "可视化输出目录", value: "output/数据理解/sample", required: true },
+                { id: "n_topics", label: "覆盖主题数量 (可选)", value: "6", type: "number" }
+            ]
+        },
+        rag_builder: {
+            script: "src/rag_builder.py",
+            description: "构建 RAG 向量索引 (需同名 .json 配置文件)",
+            fields: [
+                { id: "csv_path", label: "数据源 CSV 路径", value: "data/samples/class/rag_source.csv", required: true },
+                { id: "rag_config", label: "全局 RAG 配置文件", value: "configs/rag_config.json", required: true }
+            ]
+        },
+        pipeline_main: {
+            script: "src/pipeline_main.py",
+            description: "主流程：提示词组装、LLM 推理与 RAG/Web 增强",
+            fields: [
+                { id: "comment_mission", label: "任务类型", value: "class", type: "select", options: ["class", "aspect", "topic"], required: true },
+                { id: "model_name", label: "Ollama 模型名称", value: "qwen3:8b", required: true },
+                { id: "comment_csv", label: "评论 CSV 路径", value: "data/samples/class/comments.csv", required: true },
+                { id: "bg_info_txt", label: "背景信息 txt 路径", value: "data/samples/class/bg_info.txt", required: true },
+                { id: "id_col", label: "ID 列名", value: "id", required: true },
+                { id: "comment_col", label: "评论文本列名", value: "comment", required: true },
+                { id: "output_csv", label: "结果输出 CSV 路径", value: "output/结果分析/sample_class/result.csv", required: true },
+                { id: "top_k", label: "RAG 召回条数", value: "3", type: "number", required: true },
+                { id: "prompts_dir", label: "提示词模板目录", value: "prompts", required: true },
+                { id: "ollama_config", label: "Ollama 配置路径", value: "configs/llm_ollama_config.json", required: true },
+                { id: "gen_config", label: "生成参数配置路径", value: "configs/llm_generation_config.json", required: true },
+                { id: "lda_config", label: "LDA 配置路径", value: "configs/lda_config.json", required: true },
+                
+                { id: "label_list", label: "标签列表 (逗号分隔)", value: "消极,中立,积极" },
+                { id: "aspect_list", label: "方面列表 (逗号分隔, 可选)", value: "Location#Transportation,Location#Downtown,Location#Easy_to_find,Service#Queue,Service#Hospitality,Service#Parking,Service#Timely,Price#Level,Price#Cost_effective,Price#Discount,Ambience#Decoration,Ambience#Noise,Ambience#Space,Ambience#Sanitary,Food#Portion,Food#Taste,Food#Appearance,Food#Recommend" },
+                { id: "topic_list", label: "主题列表 (逗号分隔, 可选)", value: "race,region,gender" },
+                
+                { id: "is_rag", label: "启用 RAG", type: "checkbox", value: false },
+                { id: "rag_config", label: "RAG 全局配置", value: "configs/rag_config.json" },
+                { id: "rag_csv", label: "RAG 数据源 CSV", value: "data/samples/class/rag_source.csv" },
+                
+                { id: "is_web_search", label: "启用 WebSearch", type: "checkbox", value: false },
+                { id: "web_config", label: "WebSearch 配置", value: "configs/websearch_config.json" },
+                
+                { id: "disable_think", label: "禁用思维链", type: "checkbox", value: false },
+                { id: "is_analyze_topic", label: "开启主题预分析", type: "checkbox", value: false },
+                { id: "is_llm_analyze_aspect", label: "LLM 生成方面列表", type: "checkbox", value: false },
+                { id: "is_llm_analyze_topic", label: "LLM 生成主题列表", type: "checkbox", value: false },
+                
+                { id: "sample", label: "采样处理前 N 条", value: "", type: "number" },
+                { id: "topic_result_path", label: "预计算主题 JSON", value: "output/数据理解/sample/topic_analysis_result.json" },
+                { id: "n_topics", label: "覆盖主题数量", value: "6", type: "number" }
+            ]
+        },
+        result_parser: {
+            script: "src/result_parser.py",
+            description: "解析 LLM 输出 JSON 并生成可视化报表",
+            fields: [
+                { id: "input_csv", label: "推理结果 CSV 路径", value: "output/结果分析/sample_class/result.csv", required: true },
+                { id: "mission", label: "任务类型", value: "class", type: "select", options: ["class", "aspect", "topic"], required: true },
+                { id: "label_list", label: "合法标签列表 (逗号分隔)", value: "消极,中立,积极", required: true },
+                { id: "output_dir", label: "结果保存目录", value: "output/结果分析/sample_class", required: true },
+                { id: "aspect_list", label: "合法方面列表 (可选)", value: "Location#Transportation,Location#Downtown,Location#Easy_to_find,Service#Queue,Service#Hospitality,Service#Parking,Service#Timely,Price#Level,Price#Cost_effective,Price#Discount,Ambience#Decoration,Ambience#Noise,Ambience#Space,Ambience#Sanitary,Food#Portion,Food#Taste,Food#Appearance,Food#Recommend" },
+                { id: "topic_list", label: "合法主题列表 (可选)", value: "race,region,gender" }
+            ]
+        },
+        model_evaluation: {
+            script: "src/model_evaluation.py",
+            description: "计算 Accuracy/F1 指标并生成混淆矩阵",
+            fields: [
+                { id: "input_csv", label: "待评估 CSV 路径", value: "output/结果分析/sample_class/result.csv", required: true },
+                { id: "mission", label: "任务类型", value: "class", type: "select", options: ["class", "aspect", "topic"], required: true },
+                { id: "output_dir", label: "评估结果输出目录", value: "output/模型评估/sample_class", required: true },
+                { id: "task_name", label: "任务显示名称", value: "美团3分类评估", required: true },
+                { id: "label_list", label: "评估标签顺序 (逗号分隔)", value: "消极,中立,积极", required: true },
+                { id: "mapping", label: "标签映射 (JSON 格式)", value: '{"0": "消极", "1": "中立", "2": "积极"}' },
+                { id: "topic_mapping", label: "主题映射 (针对 topic)", value: '{"gender": "性别", "race": "种族", "region": "地域"}' },
+                { id: "true_col", label: "真实标签列 (class)", value: "label" },
+                { id: "pred_col", label: "预测标签列 (class)", value: "parsed_label" },
+                { id: "true_topic_col", label: "真实主题列 (topic)", value: "topic" },
+                { id: "true_label_col", label: "真实标签列 (topic)", value: "topic_label" },
+                { id: "pred_topic_col", label: "预测主题列 (topic)", value: "pred_topic" },
+                { id: "pred_label_col", label: "预测标签列 (topic)", value: "pred_label" },
+                { id: "true_cols", label: "真实方面列 (aspect, 逗号分隔)", value: "Location#Transportation,Location#Downtown,Location#Easy_to_find,Service#Queue,Service#Hospitality,Service#Parking,Service#Timely,Price#Level,Price#Cost_effective,Price#Discount,Ambience#Decoration,Ambience#Noise,Ambience#Space,Ambience#Sanitary,Food#Portion,Food#Taste,Food#Appearance,Food#Recommend" },
+                { id: "pred_cols", label: "预测方面列 (aspect, 逗号分隔)", value: "pred_Location#Transportation,pred_Location#Downtown,pred_Location#Easy_to_find,pred_Service#Queue,pred_Service#Hospitality,pred_Service#Parking,pred_Service#Timely,pred_Price#Level,pred_Price#Cost_effective,pred_Price#Discount,pred_Ambience#Decoration,pred_Ambience#Noise,pred_Ambience#Space,pred_Ambience#Sanitary,pred_Food#Portion,pred_Food#Taste,pred_Food#Appearance,pred_Food#Recommend" }
+            ]
+        }
+    };
+
+    function switchTask(task) {
+        currentTask = task;
+        document.querySelectorAll('.task-tab').forEach(t => t.classList.remove('active'));
+        const tabId = {
+            data_understanding: 'tab-du',
+            rag_builder: 'tab-rag',
+            pipeline_main: 'tab-main',
+            result_parser: 'tab-parser',
+            model_evaluation: 'tab-eval'
+        }[task];
+        document.getElementById(tabId).classList.add('active');
+        renderForm();
+    }
+
+    function renderForm() {
+        const config = taskConfigs[currentTask];
+        const container = document.getElementById('task-form');
+        
+        let html = `<div class="mb-4"><div class="text-indigo-300 font-bold text-sm mb-1">${config.script}</div><div class="text-xs opacity-50">${config.description}</div></div>`;
+        
+        // 分组渲染：必填参数、开关、可选参数
+        const required = config.fields.filter(f => f.required);
+        const checkboxes = config.fields.filter(f => f.type === 'checkbox');
+        const optional = config.fields.filter(f => !f.required && f.type !== 'checkbox');
+
+        const renderField = (f) => {
+            if (f.type === 'checkbox') {
+                return `
+                    <div class="form-group flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-indigo-500/30 transition">
+                        <input type="checkbox" id="field-${f.id}" ${f.value ? 'checked' : ''} onchange="updateCmdPreview()" class="w-4 h-4 accent-indigo-500">
+                        <label class="mb-0 cursor-pointer text-xs" for="field-${f.id}">${f.label}</label>
+                    </div>
+                `;
+            }
+            if (f.type === 'select') {
+                return `
+                    <div class="form-group">
+                        <label>${f.label}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                        <select id="field-${f.id}" class="form-input" onchange="updateCmdPreview()">
+                            ${f.options.map(opt => `<option value="${opt}" ${f.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            return `
+                <div class="form-group">
+                    <label>${f.label}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                    <input type="${f.type || 'text'}" id="field-${f.id}" value="${f.value}" class="form-input" oninput="updateCmdPreview()" placeholder="请输入 ${f.label}">
+                </div>
+            `;
+        };
+
+        html += `<div class="space-y-4">`;
+        if (required.length) {
+            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${required.map(renderField).join('')}</div>`;
+        }
+        if (checkboxes.length) {
+            html += `<div class="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-white/5">${checkboxes.map(renderField).join('')}</div>`;
+        }
+        if (optional.length) {
+            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/5">${optional.map(renderField).join('')}</div>`;
+        }
+        html += `</div>`;
+        
+        container.innerHTML = html;
+        updateCmdPreview();
+    }
+
+    function getCmd() {
+        const config = taskConfigs[currentTask];
+        let cmd = `"${PYTHON_EXE}" ${config.script}`;
+        config.fields.forEach(f => {
+            const el = document.getElementById(`field-${f.id}`);
+            if (!el) return;
+            
+            if (f.type === 'checkbox') {
+                if (el.checked) {
+                    cmd += ` --${f.id}`;
+                }
+            } else {
+                const val = el.value.trim();
+                if (val) {
+                    // 对于 JSON 字符串，PowerShell 需要特殊的转义
+                    if (val.startsWith('{') || val.startsWith('[')) {
+                        // 在 PowerShell 中，双引号需要用 ` 来转义，或者整个用单引号包裹
+                        // 但由于 subprocess.Popen(shell=True) 在 Windows 上通常调用 cmd.exe 或 powershell
+                        // 这里我们尝试最稳健的转义：用单引号包裹整个参数值，内部双引号用 \"
+                        cmd += ` --${f.id} '${val.replace(/'/g, "''")}'`;
+                    } else if (val.includes(' ') || val.includes('"')) {
+                        cmd += ` --${f.id} "${val.replace(/"/g, '\\"')}"`;
+                    } else {
+                        cmd += ` --${f.id} ${val}`;
+                    }
+                }
+            }
+        });
+        return cmd;
+    }
+
+    function updateCmdPreview() {
+        document.getElementById('cmd-preview').textContent = getCmd();
+    }
+
+    function clearLogs() {
+        document.getElementById('log-container').innerHTML = '';
+    }
+
+    async function launch() {
+        const cmd = getCmd();
+        const btn = document.getElementById('launch-btn');
+        btn.disabled = true;
+        btn.textContent = '任务执行中...';
+        btn.classList.replace('bg-indigo-600', 'bg-gray-600');
+
+        clearLogs();
+        appendLog('正在启动任务...', 'text-indigo-300');
+        
+        const res = await fetch('/api/launch', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ command: cmd })
+        });
+        
+        const result = await res.json();
+        if (result.status === 'success') {
+            startLogStream();
+        } else {
+            appendLog('启动失败: ' + result.message, 'text-red-400');
+            resetBtn();
+        }
+    }
+
+    function startLogStream() {
+        const eventSource = new EventSource('/api/logs');
+        const logContainer = document.getElementById('log-container');
+
+        eventSource.onmessage = function(event) {
+            if (event.data.includes('[任务结束]')) {
+                eventSource.close();
+                resetBtn();
+            }
+            appendLog(event.data);
+        };
+
+        eventSource.onerror = function() {
+            eventSource.close();
+            resetBtn();
+        };
+    }
+
+    function appendLog(text, colorClass = 'text-green-400') {
+        const div = document.createElement('div');
+        div.className = colorClass;
+        div.textContent = '> ' + text;
+        const container = document.getElementById('log-container');
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function resetBtn() {
+        const btn = document.getElementById('launch-btn');
+        btn.disabled = false;
+        btn.textContent = '开始任务 (Start Task)';
+        btn.classList.replace('bg-gray-600', 'bg-indigo-600');
+    }
+
+    // 初始化加载第一个任务表单
+    switchTask('data_understanding');
+</script>
+{% endblock %}
